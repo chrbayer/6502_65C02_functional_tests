@@ -24,7 +24,7 @@ report_init
         ;nothing to initialize
         rprt rmsg_start
         rts
-        
+
 ;show stack (with saved registers), zeropage and absolute memory workspace
 ;after an error was trapped in the test program
 report_error
@@ -81,13 +81,13 @@ rerr1   jsr rget
         cmp #'S'
         beq rskip
         cmp #'C'
-        bne rerr1        
+        bne rerr1
 ;restore registers
         pla
         tay
         pla
         tax
-        pla 
+        pla
         plp
         rts
 ;skip the current test
@@ -106,12 +106,12 @@ rskipl2 lda (zpt),y         ;next byte
         cmp rmark,y
         bne rskipnx         ;no match
         dey
-        bmi rskipf          ;found pattern        
+        bmi rskipf          ;found pattern
         cpy #1              ;skip immediate value
         bne rskipl2
         dey
         beq rskipl2
-        
+
 rskipnx inc zpt             ;next RAM location
         bne rskipl1
         inc zpt+1
@@ -124,7 +124,7 @@ rskipf  ldy #1              ;pattern found - check test number
         cmp test_case       ;is next test?
         bne rskipnx         ;continue searching
 rskipe  jmp (zpt)           ;start next test or rerun at end of tests
-        
+
 rmark   lda #0              ;begin of test search pattern
         sta test_case
 
@@ -144,11 +144,11 @@ report_success
         rprt rmsg_success
 rsuc1   jsr rget
         cmp #'R'
-        bne rsuc1        
+        bne rsuc1
         rts
 
 ;input subroutine
-;get a character from standard input 
+;get a character from standard input
 ;adjust according to the needs in your test environment
 rget                ;get character in A
 ;rget1
@@ -173,7 +173,7 @@ rcrlf   lda #10
 
 rspace  lda #' '
         bne rchar
-        
+
 rhex    pha         ;report hex byte in A
         lsr a       ;high nibble first
         lsr a
@@ -189,7 +189,7 @@ rnib    clc         ;report nibble in A
         bcc rchar
         adc #6      ;make printable A-F
 
-;send a character to standard output 
+;send a character to standard output
 ;adjust according to the needs in your test environment
 ;register X needs to be preserved!
 rchar               ;report character in A
@@ -217,4 +217,3 @@ rmsg_success
 rmsg_priority
         db  10,13,"interrupt sequence (NMI IRQ BRK) ",0
     endif
-   

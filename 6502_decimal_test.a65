@@ -117,14 +117,14 @@ NEXT2   inc N2    ; [6] see text
         bpl LOOP1 ; loop through both values of the carry flag
         lda #0    ; test passed, so store 0 in ERROR
         sta ERROR
-DONE    
+DONE
         end_of_test
-           
+
 ; Calculate the actual decimal mode accumulator and flags, the accumulator
 ; and flag results when N1 is added to N2 using binary arithmetic, the
 ; predicted accumulator result, the predicted carry flag, and the predicted
-; V flag   
-;          
+; V flag
+;
 ADD     sed       ; decimal mode
         cpy #1    ; set carry if Y = 1, clear carry if Y = 0
         lda N1
@@ -138,7 +138,7 @@ ADD     sed       ; decimal mode
         lda N1
         adc N2
         sta HA    ; accumulator result of N1+N2 using binary arithmetic
-           
+
         php
         pla
         sta HNVZC ; flags result of N1+N2 using binary arithmetic
@@ -153,10 +153,10 @@ ADD     sed       ; decimal mode
         and #$0F
         sec
 A1      ora N1H
-;          
+;
 ; if N1L + N2L <  $0A, then add N2 & $F0
 ; if N1L + N2L >= $0A, then add (N2 & $F0) + $0F + 1 (carry is set)
-;          
+;
         adc N2H,x
         php
         bcs A2
@@ -169,16 +169,16 @@ A3      sta AR    ; predicted accumulator result
         pla
         sta CF    ; predicted carry result
         pla
-;          
+;
 ; note that all 8 bits of the P register are stored in VF
-;          
+;
         sta VF    ; predicted V flags
         rts
-           
+
 ; Calculate the actual decimal mode accumulator and flags, and the
 ; accumulator and flag results when N2 is subtracted from N1 using binary
 ; arithmetic
-;          
+;
 SUB     sed       ; decimal mode
         cpy #1    ; set carry if Y = 1, clear carry if Y = 0
         lda N1
@@ -192,15 +192,15 @@ SUB     sed       ; decimal mode
         lda N1
         sbc N2
         sta HA    ; accumulator result of N1-N2 using binary arithmetic
-           
+
         php
         pla
         sta HNVZC ; flags result of N1-N2 using binary arithmetic
         rts
-           
+
         if cputype != 1
 ; Calculate the predicted SBC accumulator result for the 6502 and 65816
-;          
+;
 SUB1        cpy #1    ; set carry if Y = 1, clear carry if Y = 0
             lda N1L
             sbc N2L
@@ -211,17 +211,17 @@ SUB1        cpy #1    ; set carry if Y = 1, clear carry if Y = 0
             and #$0F
             clc
 S11         ora N1H
-;          
+;
 ; if N1L - N2L >= 0, then subtract N2 & $F0
 ; if N1L - N2L <  0, then subtract (N2 & $F0) + $0F + 1 (carry is clear)
-;          
+;
             sbc N2H,x
             bcs S12
             sbc #$5F  ; subtract $60 (carry is clear)
 S12         sta AR
             rts
         endif
-           
+
         if cputype = 1
 ; Calculate the predicted SBC accumulator result for the 6502 and 65C02
 ;
@@ -234,10 +234,10 @@ SUB2        cpy #1    ; set carry if Y = 1, clear carry if Y = 0
             and #$0F
             clc
 S21         ora N1H
-;          
+;
 ; if N1L - N2L >= 0, then subtract N2 & $F0
 ; if N1L - N2L <  0, then subtract (N2 & $F0) + $0F + 1 (carry is clear)
-;          
+;
             sbc N2H,x
             bcs S22
             sbc #$5F   ; subtract $60 (carry is clear)
@@ -247,14 +247,14 @@ S22         cpx #0
 S23         sta AR     ; predicted accumulator result
             rts
         endif
-           
+
 ; Compare accumulator actual results to predicted results
-;          
-; Return:  
+;
+; Return:
 ;   Z flag = 1 (BEQ branch) if same
 ;   Z flag = 0 (BNE branch) if different
-;          
-COMPARE 
+;
+COMPARE
         if chk_a = 1
             lda DA
             cmp AR
@@ -284,22 +284,22 @@ COMPARE
             and #1    ; mask off C flag
         endif
 C1      rts
-           
+
 ; These routines store the predicted values for ADC and SBC for the 6502,
 ; 65C02, and 65816 in AR, CF, NF, VF, and ZF
 
         if cputype = 0
 
 A6502       lda VF      ; 6502
-;          
+;
 ; since all 8 bits of the P register were stored in VF, bit 7 of VF contains
 ; the N flag for NF
-;          
+;
             sta NF
             lda HNVZC
             sta ZF
             rts
-           
+
 S6502       jsr SUB1
             lda HNVZC
             sta NF
@@ -317,7 +317,7 @@ A6502       lda AR      ; 65C02
             sta NF
             sta ZF
             rts
-           
+
 S6502       jsr SUB2
             lda AR
             php
@@ -330,7 +330,7 @@ S6502       jsr SUB2
             rts
 
         endif
-        if  cputype = 2   
+        if  cputype = 2
 
 A6502       lda AR      ; 65C816
             php
@@ -338,7 +338,7 @@ A6502       lda AR      ; 65C816
             sta NF
             sta ZF
             rts
-           
+
 S6502       jsr SUB1
             lda AR
             php
