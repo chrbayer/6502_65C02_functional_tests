@@ -81,7 +81,7 @@ ROM_vectors = 1
 ;load_data_direct (0=move from code segment, 1=load directly)
 ;loading directly is preferred but may not be supported by your platform
 ;0 produces only consecutive object code, 1 is not suitable for a binary image
-load_data_direct = 1
+load_data_direct = 0
 
 ;I_flag behavior (0=force enabled, 1=force disabled, 2=prohibit change, 3=allow
 ;change) 2 requires extra code and is not recommended.
@@ -101,10 +101,10 @@ data_segment = $200
 
 ;code_segment memory start address, 10kB of consecutive space required
 ;                                   add 1 kB if I_flag = 2
-code_segment = $400
+code_segment = $c000
 
 ;added WDC only opcodes WAI & STP (0=test as NOPs, >0=no test)
-wdc_op = 1
+wdc_op = 0
 
 ;added Rockwell & WDC opcodes BBR, BBS, RMB & SMB
 ;(0=test as NOPs, 1=full test, >1=no test)
@@ -121,7 +121,7 @@ report = 0
 ;RAM integrity test option. Checks for undesired RAM writes.
 ;set lowest non RAM or RAM mirror address page (-1=disable, 0=64k, $40=16k)
 ;leave disabled if a monitor, OS or background interrupt is allowed to alter RAM
-ram_top = -1
+ram_top = $10
 
         noopt       ;do not take shortcuts
 
@@ -616,9 +616,9 @@ sbiy2   dw  sba2-$ff
 zp_bss_end
 
         org data_segment
-pg_x    ds  2               ;high JMP indirect address for page cross bug
 test_case   ds  1           ;current test number
 ram_chksm   ds  2           ;checksum for RAM integrity test
+pg_x    ds  2               ;high JMP indirect address for page cross bug
 ;add/subtract operand copy - abs tests write area
 abst                        ;5 bytes store/modify test area
 ada2    ds  1               ;operand 2
@@ -2872,10 +2872,10 @@ ji_px   nop             ;low address byte matched with ji_ret
         trap            ;jmp indirect page cross bug
     endif
 
-    if (load_data_direct = 1) & (ROM_vectors = 1)
+    if (ROM_vectors = 1)
         org $fffa       ;vectors
         dw  nmi_trap
-        dw  res_trap
+        dw  start
         dw  irq_trap
     endif
 
