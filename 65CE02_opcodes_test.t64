@@ -21,7 +21,7 @@
 ; modes and functionality not available in the NMOS version of the 6502.
 ; The 6502_functional_test is a prerequisite to this test.
 ; NMI, IRQ, STP & WAI are covered in the 6502_interrupt_test.
-; 
+;
 ; version 04-dec-2017
 ; contact info at http://2m5.de or email K@2m5.de
 ;
@@ -81,7 +81,7 @@ ROM_vectors = 1
 ;load_data_direct (0=move from code segment, 1=load directly)
 ;loading directly is preferred but may not be supported by your platform
 ;0 produces only consecutive object code, 1 is not suitable for a binary image
-load_data_direct = 1
+load_data_direct = 0
 
 ;I_flag behavior (0=force enabled, 1=force disabled, 2=prohibit change, 3=allow
 ;change) 2 requires extra code and is not recommended.
@@ -90,24 +90,24 @@ I_flag = 3
 ;configure memory - try to stay away from memory used by the system
 ;zero_page memory start address, $4e (78) consecutive Bytes required
 ;                                add 2 if I_flag = 2
-zero_page = $a  
+zero_page = $a
 
 ;data_segment memory start address, $63 (99) consecutive Bytes required
 ; + 12 Bytes at data_segment + $f9 (JMP indirect page cross test)
-data_segment = $400
+data_segment = $200
     .if (data_segment & $ff) != 0
         ERROR ERROR ERROR low byte of data_segment MUST be $00 !!
-    .endif  
+    .endif
 
 ;code_segment memory start address, 10kB of consecutive space required
 ;                                   add 1 kB if I_flag = 2
-code_segment = $600  
+code_segment = $c000
 
 ;added WDC only opcodes WAI & STP (0=test as NOPs, >0=no test)
 wdc_op = 1
 
 ;added Rockwell & WDC opcodes BBR, BBS, RMB & SMB
-;(0=test as NOPs, 1=full test, >1=no test) 
+;(0=test as NOPs, 1=full test, >1=no test)
 rkwl_wdc_op = 1
 
 ;skip testing all undefined opcodes override
@@ -121,35 +121,9 @@ report = 0
 ;RAM integrity test option. Checks for undesired RAM writes.
 ;set lowest non RAM or RAM mirror address page (-1=disable, 0=64k, $40=16k)
 ;leave disabled if a monitor, OS or background interrupt is allowed to alter RAM
-ram_top = -1
+ram_top = $10
 
         ;noopt       ;do not take shortcuts
-        
-; Hypervisor registers 
-;hyper_a		= $d640
-;hyper_x		= $d641
-;hyper_y 	= $d642
-;hyper_z 	= $d643
-;hyper_b 	= $d644
-;hyper_spl 	= $d645
-;hyper_sph 	= $d646
-;hyper_p		= $d647
-;hyper_pcl	= $d648
-;hyper_pch	= $d649
-hyper_map_x	= $d64a
-hyper_map_a	= $d64b
-hyper_map_z	= $d64c
-hyper_map_y	= $d64d
-
-;hyper_port_00	= $d650
-;hyper_port_01	= $d651
-;hyper_iomode	= $d652
-
-hyper_vector_pcl  = $d674
-hyper_vector_pch  = $d675
-
-hyper_trap_pcl  = $d676
-hyper_trap_pch  = $d677
 
 ;macros for error & success traps to allow user modification
 ;example:
@@ -418,7 +392,7 @@ tst_stat    .macro       ;testing flags in the processor status register
             trap_ne
             plp         ;restore status
             .endm
-            
+
 tst_a       .macro       ;testing result in accu & flags
             php         ;save flags
             cmp #<\1     ;test result
@@ -495,7 +469,7 @@ tst_ay      .macro       ;indexed testing result in accu & flags
             cmp \2,y    ;test flags
             trap_ne
             .endm
-        
+
 tst_zp      .macro       ;indexed testing result in zp & flags
             php         ;save flags
             lda zpt
@@ -539,7 +513,7 @@ tst_absx    .macro       ;testing result in abs,x & flags
             cmp \2,x    ;test flags
             trap_ne
             .endm
-            
+
 test_num    .var 0
 next_test   .segment        ;make sure, tests don't jump the fence
             lda test_case   ;previous test
@@ -557,7 +531,7 @@ irq_a   .byte 0                ;a register
 irq_x   .byte 0                ;x register
     .if I_flag == 2
 ;masking for I bit in status
-flag_I_on   .byte 0            ;or mask to load flags   
+flag_I_on   .byte 0            ;or mask to load flags
 flag_I_off  .byte 0            ;and mask to load flags
     .endif
 zpt                            ;5 bytes store/modify test area
@@ -571,7 +545,7 @@ adrf    .byte 0                ;expected flags NV0000ZC (-V in decimal mode)
 sb2     .byte 0                ;operand 2 complemented for subtract
 zp_bss
 zp1     .byte  $c3,$82,$41,0   ;test patterns for LDx BIT ROL ROR ASL LSR
-zp7f    .byte  $7f             ;test pattern for compare  
+zp7f    .byte  $7f             ;test pattern for compare
 ;logical zeropage operands
 zpOR    .byte  0,$1f,$71,$80   ;test pattern for OR
 zpAN    .byte  $0f,$ff,$7f,$80 ;test pattern for AND
@@ -608,7 +582,7 @@ sbiy2   .word  sba2-$ff
 zp_bss_end
         .endm
 
-data    .segment        
+data    .segment
 pg_x    .byte  0,0             ;high JMP indirect address for page cross bug
 test_case   .byte  0           ;current test number
 ram_chksm   .byte  0,0         ;checksum for RAM integrity test
@@ -632,7 +606,7 @@ abs7f   .byte  $7f             ;test pattern for compare
 ;loads
 fLDx    .byte  fn,fn,0,fz      ;expected flags for load
 ;shifts
-rASL                           ;expected result ASL & ROL -carry  
+rASL                           ;expected result ASL & ROL -carry
 rROL    .byte  $86,$04,$82,0   ; "
 rROLc   .byte  $87,$05,$83,1   ;expected result ROL +carry
 rLSR                           ;expected result LSR & ROR -carry
@@ -664,7 +638,7 @@ jxi_tab = data_segment + $100 - 7     ;JMP (jxi_tab,x) x=6
 ji_tab  = data_segment + $100 - 3     ;JMP (ji_tab+2)
 jxp_tab = data_segment + $100         ;JMP (jxp_tab-255) x=255
         .endm
-      
+
 
 *       = zero_page
         .dsection bss
@@ -685,12 +659,12 @@ start   cld
     .if I_flag == 1
         sei
     .endif
-    
+
 ;initialize I/O for report channel
     .if report == 1
         jsr report_init
     .endif
-    
+
 ;initialize BSS segment
     .if load_data_direct != 1
         ldx #zp_end-zp_init-1
@@ -703,13 +677,6 @@ ld_data lda data_init,x
         sta data_bss,x
         dex
         bpl ld_data
-      .if ROM_vectors == 1
-        ldx #5
-ld_vect lda vec_init,x
-        sta vec_bss,x
-        dex
-        bpl ld_vect
-      .endif
     .endif
 
 ;retain status of interrupt flag
@@ -721,10 +688,10 @@ ld_vect lda vec_init,x
         eor #<(~4)     ;reverse
         sta flag_I_off  ;and mask
     .endif
-        
+
 ;generate checksum for RAM integrity test
     .if ram_top > -1
-        lda #0 
+        lda #0
         sta zpt         ;set low byte of indirect pointer
         sta ram_chksm+1 ;checksum high byte
         ldx #11         ;reset modifiable RAM
@@ -754,13 +721,13 @@ gcs4    iny
         bne gcs5
         sta ram_chksm   ;checksum complete
     .endif
-        next_test            
+        next_test
 
 ; quick/dirty test 16-bit branches by jumping across Z register test code (which should be more than 128 bytes large).
 
         ldy #0
         bra braf0       ; branch should always be taken
-        trap 
+        trap
 
         dey
         dey
@@ -769,11 +736,11 @@ brab0   dey             ; We should land here, or Y test will fail
         dey
         cpy #0
         trap_ne
-        
+
         ; Check one conditional branch
         beq beqf0
         trap
-        
+
         dey
         dey
 beqb0   dey             ; We should land here, or Y test will fail
@@ -781,7 +748,7 @@ beqb0   dey             ; We should land here, or Y test will fail
         dey
         cpy #0
         trap_ne
-        
+
         ; 16-bit BSR test
         ldy #0
         bsr bsrf0
@@ -790,7 +757,7 @@ beqb0   dey             ; We should land here, or Y test will fail
         dey
         cpy #0
         trap_ne
-        
+
         next_test
 
 ; Basic Z register tests.  Verify that Z can be changed and basic comparisons work.
@@ -799,7 +766,7 @@ beqb0   dey             ; We should land here, or Y test will fail
         ldz #$aa
         cpz #$aa        ; verify load/compare immediate is ok
         trap_ne
-        
+
         lda #$55
         sta zpt
         stz zpt         ; overwrite it
@@ -808,7 +775,7 @@ beqb0   dey             ; We should land here, or Y test will fail
         trap_ne
         cpz zpt         ; check of  CPZ zp
         trap_ne
-        
+
         ; test STZ abs gives #$aa
         lda #$55
         sta abst
@@ -817,7 +784,7 @@ beqb0   dey             ; We should land here, or Y test will fail
         cmp #$aa
         trap_ne
         cpz abst        ; check of CPZ abs
-        
+
         ; test STZ zp,x works
         lda #1
         tax
@@ -828,7 +795,7 @@ beqb0   dey             ; We should land here, or Y test will fail
         lda zpt+1
         cmp #$aa
         trap_ne
-        
+
         ; test STZ abs,x works
         sta abst+0
         sta abst+1
@@ -836,10 +803,10 @@ beqb0   dey             ; We should land here, or Y test will fail
         stz abst,x
         lda abst+1
         cmp #$aa
-                
+
         cpz #$aa        ; verify that Z contains #$aa
         trap_ne
-        
+
         ; Clear memory
         ldz #$0
         stz zpt+0
@@ -848,19 +815,19 @@ beqb0   dey             ; We should land here, or Y test will fail
         stz abst+0
         sta abst+1
         sta abst+2
-        
+
         ; Quick tests for TAZ / TZA (flags not yet checked)
-        
+
         lda #$99
         taz
         cpz #$99
         trap_ne
-        
+
         ldz #$44
         tza
         cmp #$44
         trap_ne
-                
+
 ;testing stack operations PHZ PLZ
         lda #$99        ;protect a
         ldx #$ff        ;initialize stack
@@ -930,45 +897,45 @@ beqb0   dey             ; We should land here, or Y test will fail
         cpy #$aa        ;Y unchanged
         cpx #$55        ;X unchanged
         trap_ne
-        
+
 ; Quick check that (zp) is now really (zp),z
         lda #$55        ; set up test area
         sta ada2
-        
+
         ldz #$ff        ; set up indirect offset
         lda (adiy2),z   ; load value
         cmp #$55        ; compare to expected
         trap_ne
-        
+
         ldz #0          ; Restore Z to default of 0
-        
-        next_test            
- 
+
+        next_test
+
 ; branch around 16-bit branch landing area
         bra stacktests
-        
+
 ; Landing area for forward 16-bit branches.
 
         iny
         iny
 braf0   iny             ; We should land here
         iny
-        iny   
+        iny
         cpy #$03
         trap_ne
-        
+
         beq   brab0     ; Now branch back...
-        
+
         iny
         iny
 beqf0   iny             ; We should land here
         iny
-        iny   
+        iny
         cpy #$03
         trap_ne
-     
+
         beq   beqb0     ; Now branch back...
-     
+
         iny
         iny
 bsrf0   iny
@@ -977,11 +944,11 @@ bsrf0   iny
         cpy #$03
         trap_ne
         rts
-        
+
 rtnimm  rtn #2
-        
+
 stacktests
-        
+
 ; Test phw variants
         phw #$aa55      ; Should push $aa then $55
         pla
@@ -990,7 +957,7 @@ stacktests
         pla
         cmp #$55
         trap_ne
-        
+
         phw abs1
         pla
         cmp abs1+1
@@ -1007,21 +974,21 @@ stacktests
         trap_ne
 
 ; Extended stack mode - Verify TYS lets us move stack to new page
-        
+
         ldy #$ff        ; set Y to different value
-        tsy           
+        tsy
         cpy #$01        ; This should now be #$01 by default
         trap_ne
         iny             ; move stack up a page (to #$02)
         ldx #$ff
-        tys           
+        tys
         txs             ; init stack to $02ff
-      
+
         ; zero stack area
         lda #$00
         sta $2ff
         sta $2fe
-        
+
         ldy #$55
         phy
         cpy $2ff        ; on stack?
@@ -1041,7 +1008,7 @@ stacktests
         tsy
         cpy #$02        ; got back stack upper byte?
         trap_ne
-        
+
 ; Extended stack mode - Verify that with E bit set (the default) that the stack
 ;                       still wraps at both ends.
 
@@ -1049,12 +1016,12 @@ stacktests
         ldx #$ff
         tys
         txs
-        
+
         php
         pla
         and #$20        ; verify that 'E' (previously reserved) reads back 1
         trap_eq
-        
+
         lda #$00        ; force processor status to 0...
         pha
         plp
@@ -1062,83 +1029,83 @@ stacktests
         pla
         and #$20        ; verify that 'E' (previously reserved) still reads back 1
         trap_eq
-        
-        cle             
+
+        cle
         php
         pla
         and #$20        ; verify that 'E' (previously reserved) now reads back 0
         trap_ne
-        
+
         plx             ; pop bogus value off the stack (should wrap from $01ff to $0200)
         tsy
         tsx
         cpy #$02        ; verify stack wrapped
         trap_ne
         cpx #$00
-        trap_ne         
-        
+        trap_ne
+
         lda #$00
         sta $200
         lda #$99
         pha
         cmp $200        ; stack written as expected?
-        trap_ne         
-        
+        trap_ne
+
         tsy
         tsx
         cpy #$01        ; verify stack wrapped
         trap_ne
         cpx #$ff
-        trap_ne         
-        
+        trap_ne
+
         lda #$ff
         pha
         plp
         pla
         and #$20        ; verify that 'E' (previously reserved) still reads back 0
         trap_ne
-        
+
         see             ; re-set stack extend disable bit
-        
+
         php
         pla
         and #$20        ; verify that 'E' (previously reserved) reads back 1 again
         trap_eq
-        
+
         ldy #$01        ; restore stack setup
         ldx #$ff
         tys
         txs
-        
+
         next_test
 
 ; Base page register test - Verify TAB/TBA can save/restore as expected and that at least one
 ; zero page based addressing mode is affected by moving zero page around.
-        
+
         tba
         trap_ne         ; This should give us back zero
-        
+
         lda #$03
         tab
         lda #$99        ; Trash A
         tba
         cmp #$03        ; make sure it's as expected again
         trap_ne
-        
+
         ; quick zero page write test
         lda #$55
         sta zpt+$300    ; trash test location
-        
+
         lda #$99
         sta zpt         ; store to 'zero page' location
         cmp zpt+$300    ; verify it landed in expected place
         trap_ne
-        
+
         lda #$00
         tab             ; put zero page back
-        
+
         next_test
-        
+
 ; Quick smoke check of NEG.
         lda #$00
         neg
@@ -1158,9 +1125,9 @@ stacktests
         trap_eq
         cmp #$80
         trap_ne
-        
+
         next_test
-        
+
 ; Quick sanity test of ASR
         lda #$7f
         sec           ; set carry bit
@@ -1187,7 +1154,7 @@ stacktests
         trap_ne
         asr
         trap_cc
-        
+
 ; Do the same for ASR zp and ASR zp,x
         lda #$7f
         sta zpt
@@ -1207,9 +1174,9 @@ stacktests
         lda zpt,x
         cmp #$c0
         trap_ne
-        
+
         next_test
-        
+
 ; test ASW abs (this is a shift left)
         lda #$80
         sta abst+0
@@ -1223,12 +1190,12 @@ stacktests
         trap_ne     ; should be zero
         lda abst+1
         trap_eq     ; shouldn't be zero
-        cmp #$01    
+        cmp #$01
         trap_ne
-        
+
         ; Check that zero flag is not set if upper byte is zero, nor is
         ; negative flag set if lower byte winds up with high bit set
-        
+
         lda #$40
         sta abst+0
         lda #$00
@@ -1237,7 +1204,7 @@ stacktests
         asw abst
         trap_eq     ; should not be zero
         trap_mi     ; should not be minus
-        
+
         ; Check that zero flag is set properly if both bytes wind up zero
         lda #$00
         sta abst+0
@@ -1259,15 +1226,15 @@ stacktests
         trap_cs     ; carry out should be zero
         lda abst+0
         cmp #$01    ; verify carry shifted in
-        trap_ne     ; 
+        trap_ne     ;
         lda abst+1
         trap_eq     ; shouldn't be zero
-        cmp #$01    
+        cmp #$01
         trap_ne
-        
+
         ; Check that zero flag is not set if upper byte is zero, nor is
         ; negative flag set if lower byte winds up with high bit set
-        
+
         lda #$40
         sta abst+0
         lda #$00
@@ -1276,7 +1243,7 @@ stacktests
         row abst
         trap_eq     ; should not be zero
         trap_mi     ; should not be minus
-        
+
         ; Check that zero flag is set properly if both bytes wind up zero
         lda #$00
         sta abst+0
@@ -1286,38 +1253,38 @@ stacktests
         row abst
         trap_ne     ; result should be zero
         trap_cc     ; carry should be set
-        
+
         next_test
-        
+
 ; Quick test of sty abs,x and stx abs,y
         ldy #$fc
         lda #$01
         sty abst,x
         cpy abst+1
         trap_ne
-        
+
         ldx #$cf
         ldy #$01
         stx abst,y
         cpx abst+1
         trap_ne
-        
+
         next_test
 
 ; Quick test of ldz abs and ldz abs,x
         lda #$bb
-        sta abst        
+        sta abst
         ldz abst
         cpz #$bb
         trap_ne
-        
+
         ldx #$01
         ldz abst,x
         cpz #$cf
         trap_ne
-    
+
         next_test
-        
+
 ; Test stack indirect indexed
         lda ind1+3
         pha
@@ -1331,7 +1298,7 @@ stacktests
         lda (#$3,s),y     ; shoud load from 2nd stack word (abs1+1) and add 1, so abs1+2
         cmp abs1+2
         trap_ne
-        
+
         lda indt+5
         pha
         lda indt+4        ; this will point at indt+2
@@ -1347,9 +1314,9 @@ stacktests
 
         ldx #$ff          ; reset stack
         txs
-        
+
         next_test
-        
+
 ; testing Z increment/decrement INZ & DEZ
 
         ldx #$ac    ;protect x & y
@@ -1384,15 +1351,15 @@ stacktests
         tsx
         cpx #$ff
         trap_ne     ;sp push/pop mismatch
-        
+
         ldz #$00    ; restore default Z value for next test.
-        
+
         next_test
 
 ; testing load / store accumulator LDA / STA (zp)
         ldx #$99    ;protect x & y
         ldy #$66
-        set_stat 0  
+        set_stat 0
         lda (ind1),z
         php         ;test stores do not alter flags
         eor #$c3
@@ -1460,13 +1427,13 @@ tstai1  lda abst,y
         cmp abs1,y
         trap_ne     ;store to indirect data
         txa
-        sta abst,y  ;clear                
+        sta abst,y  ;clear
         dey
         bpl tstai1
 
         ldx #$99    ;protect x & y
         ldy #$66
-        set_stat $ff  
+        set_stat $ff
         lda (ind1),z
         php         ;test stores do not alter flags
         eor #$c3
@@ -1534,7 +1501,7 @@ tstai2  lda abst,y
         cmp abs1,y
         trap_ne     ;store to indirect data
         txa
-        sta abst,y  ;clear                
+        sta abst,y  ;clear
         dey
         bpl tstai2
         tsx
@@ -1552,7 +1519,7 @@ tstz1   sta zpt,x
         bpl tstz1
         ldx #4
         set_a $55,$ff
-        stz zpt     
+        stz zpt
         stz zpt+1
         stz zpt+2
         stz zpt+3
@@ -1570,7 +1537,7 @@ tstz3   sta zpt,x
         bpl tstz3
         ldx #4
         set_a $aa,0
-        stz zpt     
+        stz zpt
         stz zpt+1
         stz zpt+2
         stz zpt+3
@@ -1580,7 +1547,7 @@ tstz4   lda zpt,x   ;verify zeros stored
         trap_ne     ;non zero after STZ zp
         dex
         bpl tstz4
-        
+
         ldx #4      ;precharge test area
         lda #7
 tstz5   sta abst,x
@@ -1589,7 +1556,7 @@ tstz5   sta abst,x
         bpl tstz5
         ldx #4
         set_a $55,$ff
-        stz abst     
+        stz abst
         stz abst+1
         stz abst+2
         stz abst+3
@@ -1607,7 +1574,7 @@ tstz7   sta abst,x
         bpl tstz7
         ldx #4
         set_a $aa,0
-        stz abst     
+        stz abst
         stz abst+1
         stz abst+2
         stz abst+3
@@ -1617,7 +1584,7 @@ tstz8   lda abst,x   ;verify zeros stored
         trap_ne     ;non zero after STZ abs
         dex
         bpl tstz8
-        
+
         ldx #4      ;precharge test area
         lda #7
 tstz11  sta zpt,x
@@ -1627,7 +1594,7 @@ tstz11  sta zpt,x
         ldx #4
 tstz15
         set_a $55,$ff
-        stz zpt,x     
+        stz zpt,x
         tst_a $55,$ff
         dex
         bpl tstz15
@@ -1654,7 +1621,7 @@ tstz14  lda zpt,x   ;verify zeros stored
         trap_ne     ;non zero after STZ zp
         dex
         bpl tstz14
-        
+
         ldx #4      ;precharge test area
         lda #7
 tstz21  sta abst,x
@@ -1664,7 +1631,7 @@ tstz21  sta abst,x
         ldx #4
 tstz25
         set_a $55,$ff
-        stz abst,x     
+        stz abst,x
         tst_a $55,$ff
         dex
         bpl tstz25
@@ -1691,16 +1658,16 @@ tstz24  lda abst,x   ;verify zeros stored
         trap_ne     ;non zero after STZ zp
         dex
         bpl tstz24
-        
+
         cpy #123
-        trap_ne     ;y altered during test 
+        trap_ne     ;y altered during test
         tsx
         cpx #$ff
         trap_ne     ;sp push/pop mismatch
         next_test
 
-         	
-; testing CMP - (zp)         
+
+; testing CMP - (zp)
         ldx #$de    ;protect x & y
         ldy #$ad
         set_a $80,0
@@ -1724,7 +1691,7 @@ tstz24  lda abst,x   ;verify zeros stored
         cpx #$de
         trap_ne     ;x altered during test
         cpy #$ad
-        trap_ne     ;y altered during test 
+        trap_ne     ;y altered during test
         tsx
         cpx #$ff
         trap_ne     ;sp push/pop mismatch
@@ -1808,10 +1775,10 @@ tora2
         cpx #$ff
         trap_ne     ;sp push/pop mismatch
         next_test
-        
+
     .if I_flag == 3
         cli
-    .endif                
+    .endif
 
 ; jump indirect (test page cross bug is fixed)
         ldx #3          ;prepare table
@@ -1888,84 +1855,20 @@ jxi_ret php             ;either SP or Y count will fail, if we do not hit
         sta pg_x+1
         ldx #$ff
         jmp (jxp_tab-$ff,x)
-        
-jxp_px  
+
+jxp_px
         trap            ;page cross by index to wrong page
 
 jxp_ok
         next_test
 
-; Hypervisor enter/exit test
-	sta $d640	; Attempt hypervisor entry
-
-        trap            ; We shouldn't get here...
-
-hyper_exit_target:
-	
-	next_test
-	
-; 4510 MAP test
-        
-        ; Map $2000 to $4000, map $8000 to $C000
-        lda #$20      ; Offset of $02000 
-        ldx #$20      ; Enable mapper for bank 1
-        ldy #$40      ; Offset of $04000
-        ldz #$10      ; Enable mapper for bank 4
-        map
-                      ; in theory we should verify that interrupts don't work here.
-        eom
-        
-        ; Verify that reads and writes to $2000 land at $4000.
-        lda #$33
-        sta $4000
-        lda #$66
-        sta $2000
-        cmp $4000
-        trap_ne
-        
-	; Attempt hypervisor trap and return.  Hypervisor will use map/eom to disable its own map
-	; registers, which shouldn't affect ours.
-	lda #1
-	sta $d641	; Attempt hypervisor entry (Trap #1)	
-	trap_ne		; Trap #1 should clear Z flag
-	
-        lda #$33
-        sta $c000
-        lda #$66
-        sta $8000
-        cmp $c000
-        trap_ne
-        
-	; Enable mapper for code segment (with no offset for now)
-	lda #$00	; Offset of $0000
-	ldx #$10	; Enable mapper for bank 0
-	ldy #$00	; Offset of $0000
-	ldz #$00	; No mapper for banks 4-7
-	map
-	eom
-	
-	; Attempt hypervisor trap and return
-	lda #1
-	sta $d641	; Attempt hypervisor entry (Trap #1)	
-	trap_ne		; Trap #1 should clear Z flag
-	
-        ; Disable mapper
-        lda #$00
-        ldx #$00
-        ldy #$00
-        ldz #$00
-        map
-        eom
-
-        next_test
-	
 ; 16-bit inrement/decrement INW/DEW zp
 inwdewtest
         ldx #$00
         ldy #$00
         stx zpt+0
         sty zpt+1
-        
+
 chkinw  cpx zpt+0
         trap_ne
         cpy zpt+1
@@ -1981,7 +1884,7 @@ chkinw  cpx zpt+0
         dew zpt
         dex
         dey
-        
+
 chkdew  cpx zpt+0
         trap_ne
         cpy zpt+1
@@ -2007,24 +1910,24 @@ chkdew  cpx zpt+0
 ;   designated write areas.
         check_ram
 ; *** DEBUG INFO ***
-; to debug checksum errors uncomment check_ram in the next_test macro to 
+; to debug checksum errors uncomment check_ram in the next_test macro to
 ; narrow down the responsible opcode.
 ; may give false errors when monitor, OS or other background activity is
 ; allowed during previous tests.
 
 
-; S U C C E S S ************************************************       
-; -------------       
+; S U C C E S S ************************************************
+; -------------
         success         ;if you get here everything went well
-; -------------       
-; S U C C E S S ************************************************       
-        jmp start       ;run again      
+; -------------
+; S U C C E S S ************************************************
+        jmp start       ;run again
 
-        
+
 ; target for the jump indirect test
 ji_adr  .word test_ji
         .word ji_ret
-        
+
         dey
         dey
 test_ji
@@ -2036,11 +1939,11 @@ test_ji
         trap_cs         ;flags loaded?
         trap_vs
         trap_mi
-        trap_eq 
+        trap_eq
         cmp #'I'        ;registers loaded?
         trap_ne
         cpx #'N'
-        trap_ne        
+        trap_ne
         cpy #('D'-3)
         trap_ne
         pha             ;save a,x
@@ -2080,11 +1983,11 @@ test_jxi
         trap_cs         ;flags loaded?
         trap_vs
         trap_mi
-        trap_eq 
+        trap_eq
         cmp #'X'        ;registers loaded?
         trap_ne
         cpx #4
-        trap_ne        
+        trap_ne
         cpy #('I'-3)
         trap_ne
         pha             ;save a,x
@@ -2125,54 +2028,54 @@ res_trap
 irq_trap
         trap            ;unexpected BRK
         jmp start       ;catastrophic error - cannot continue
-        
+
     .if report == 1
         include "report.i65"
     .endif
-            
+
 ;copy of data to initialize BSS segment
     .if load_data_direct != 1
 zp_init
 zp1_    .byte  $c3,$82,$41,0   ;test patterns for LDx BIT ROL ROR ASL LSR
-zp7f_   .byte  $7f             ;test pattern for compare  
+zp7f_   .byte  $7f             ;test pattern for compare
 ;logical zeropage operands
 zpOR_   .byte  0,$1f,$71,$80   ;test pattern for OR
 zpAN_   .byte  $0f,$ff,$7f,$80 ;test pattern for AND
 zpEO_   .byte  $ff,$0f,$8f,$8f ;test pattern for EOR
 ;indirect addressing pointers
-ind1_   .byte  abs1            ;indirect pointer to pattern in absolute memory
-        .byte  abs1+1
-        .byte  abs1+2
-        .byte  abs1+3
-        .byte  abs7f
-inw1_   .byte  abs1-$f8        ;indirect pointer for wrap-test pattern
-indt_   .byte  abst            ;indirect pointer to store area in absolute memory
-        .byte  abst+1
-        .byte  abst+2
-        .byte  abst+3
-inwt_   .byte  abst-$f8        ;indirect pointer for wrap-test store
-indAN_  .byte  absAN           ;indirect pointer to AND pattern in absolute memory
-        .byte  absAN+1
-        .byte  absAN+2
-        .byte  absAN+3
-indEO_  .byte  absEO           ;indirect pointer to EOR pattern in absolute memory
-        .byte  absEO+1
-        .byte  absEO+2
-        .byte  absEO+3
-indOR_  .byte  absOR           ;indirect pointer to OR pattern in absolute memory
-        .byte  absOR+1
-        .byte  absOR+2
-        .byte  absOR+3
+ind1_   .word  abs1            ;indirect pointer to pattern in absolute memory
+        .word  abs1+1
+        .word  abs1+2
+        .word  abs1+3
+        .word  abs7f
+inw1_   .word  abs1-$f8        ;indirect pointer for wrap-test pattern
+indt_   .word  abst            ;indirect pointer to store area in absolute memory
+        .word  abst+1
+        .word  abst+2
+        .word  abst+3
+inwt_   .word  abst-$f8        ;indirect pointer for wrap-test store
+indAN_  .word  absAN           ;indirect pointer to AND pattern in absolute memory
+        .word  absAN+1
+        .word  absAN+2
+        .word  absAN+3
+indEO_  .word  absEO           ;indirect pointer to EOR pattern in absolute memory
+        .word  absEO+1
+        .word  absEO+2
+        .word  absEO+3
+indOR_  .word  absOR           ;indirect pointer to OR pattern in absolute memory
+        .word  absOR+1
+        .word  absOR+2
+        .word  absOR+3
 ;add/subtract indirect pointers
-adi2_   .byte  ada2            ;indirect pointer to operand 2 in absolute memory
-sbi2_   .byte  sba2            ;indirect pointer to complemented operand 2 (SBC)
-adiy2_  .byte  ada2-$ff        ;with offset for indirect indexed
-sbiy2_  .byte  sba2-$ff
+adi2_   .word  ada2            ;indirect pointer to operand 2 in absolute memory
+sbi2_   .word  sba2            ;indirect pointer to complemented operand 2 (SBC)
+adiy2_  .word  ada2-$ff        ;with offset for indirect indexed
+sbiy2_  .word  sba2-$ff
 zp_end
-    .if (zp_end - zp_init) != (zp_bss_end - zp_bss)   
-        ;force assembler error if size is different   
+    .if (zp_end - zp_init) != (zp_bss_end - zp_bss)
+        ;force assembler error if size is different
         ERROR ERROR ERROR   ;mismatch between bss and zeropage data
-    .endif 
+    .endif
 data_init
 ex_adc_ adc #0              ;execute immediate opcodes
         rts
@@ -2183,7 +2086,7 @@ abs7f_  .byte  $7f             ;test pattern for compare
 ;loads
 fLDx_   .byte  fn,fn,0,fz      ;expected flags for load
 ;shifts
-rASL_                       ;expected result ASL & ROL -carry  
+rASL_                       ;expected result ASL & ROL -carry
 rROL_   .byte  $86,$04,$82,0   ; "
 rROLc_  .byte  $87,$05,$83,1   ;expected result ROL +carry
 rLSR_                       ;expected result LSR & ROR -carry
@@ -2211,9 +2114,9 @@ absrlo_ .byte  0,$ff,$7f,$80
 absflo_ .byte  fz,fn,0,fn
 data_end
     .if (data_end - data_init) != (data_bss_end - data_bss)
-        ;force assembler error if size is different   
+        ;force assembler error if size is different
         ERROR ERROR ERROR   ;mismatch between bss and data
-    .endif 
+    .endif
 
 vec_init
         .word  nmi_trap
@@ -2221,14 +2124,14 @@ vec_init
         .word  irq_trap
 vec_bss = $fffa
     .endif                   ;end of RAM init data
-    
+
 ; code at end of image due to the need to add blank space as required
     .if ($ff & (ji_ret - * - 2)) < ($ff & (jxi_ret - * - 2))
 ; JMP (abs) when $xxff and $xx00 are from same page
         .fill  <(ji_ret - * - 2)
         nop
         nop
-ji_px   nop             ;low address byte matched with ji_ret 
+ji_px   nop             ;low address byte matched with ji_ret
         nop
         trap            ;jmp indirect page cross bug
 
@@ -2236,7 +2139,7 @@ ji_px   nop             ;low address byte matched with ji_ret
         .fill  <(jxi_ret - * - 2)
         nop
         nop
-jxi_px  nop             ;low address byte matched with jxi_ret 
+jxi_px  nop             ;low address byte matched with jxi_ret
         nop
         trap            ;jmp indexed indirect page cross bug
     .else
@@ -2244,7 +2147,7 @@ jxi_px  nop             ;low address byte matched with jxi_ret
         .fill  <(jxi_ret - * - 2)
         nop
         nop
-jxi_px  nop             ;low address byte matched with jxi_ret 
+jxi_px  nop             ;low address byte matched with jxi_ret
         nop
         trap            ;jmp indexed indirect page cross bug
 
@@ -2252,157 +2155,14 @@ jxi_px  nop             ;low address byte matched with jxi_ret
         .fill  <(ji_ret - * - 2)
         nop
         nop
-ji_px   nop             ;low address byte matched with ji_ret 
+ji_px   nop             ;low address byte matched with ji_ret
         nop
         trap            ;jmp indirect page cross bug
     .endif
 
-; Hypervisor test entry point. We try to set up hyper_pc to exit back to after
-; hypervisor trap.   We should also test we can modify P register values.    
-*=	$8000
-	jmp hyper_entry1
-	nop
-	jmp hyper_entry2
-	nop
-
-hyper_entry1:	
-	lda #<hyper_exit_target
-	sta hyper_pcl
-	lda #>hyper_exit_target
-	sta hyper_pch
-	jmp hyper_exit		; Exit from hypervisor
-	
-hyper_entry2:
-        ; Disable mapper
-        lda #$00
-        ldx #$00
-        ldy #$00
-        ldz #$00
-        map
-        eom
-
-	lda hyper_p
-	ora #$02		; set Z flag
-	sta hyper_p
-	jmp hyper_exit		; Exit from hypervisor
-
-; Raw hypervisor trap entry. Save all registers and important machine state, then branch indirect to trap vector.
-*=	$8200
-	sta hyper_a
-	stx hyper_x
-	sty hyper_y
-	stz hyper_z
-	tba
-	cle ; Switch to user stack
-	tsx
-	tsy
-	see ; Switch back
-	sta hyper_b
-	stx hyper_spl
-	sty hyper_sph
-		
-	; Hypervisor Stack frame now looks like this:
-	; 3	user pch
-	; 2	user pcl
-	; 1	user p
-	
-	; pop stack frame and store where kickstart expects it to be
-	pla
-	plx
-	ply
-	sta hyper_p
-	stx hyper_pcl
-	sty hyper_pch
-	
-	.dpage $bf00
-	
-	lda $00
-	ldx $01
-	sta hyper_port_00
-	stx hyper_port_01
-	
-	; TODO - save iomode; need way to easily save/restore it
-	
-	; Set up hypervisor machine state, stack and zero page
-	cld			; Disable decimal mode
-	lda #$bf		; Set up hypervisor zero page
-	tab
-	lda #$3f		; Set ROM mappings the way we want
-	sta $00
-	lda #$35
-	sta $01
-
-	; restore user registers for call arguments
-	lda hyper_a
-	ldx hyper_x
-	ldy hyper_y
-	ldz hyper_z
-			
-	jmp (hyper_trap_pcl)		; Branch to trap entry point
-
-; Hypervisor exit
-hyper_exit:
-	lda hyper_port_00
-	ldx hyper_port_01
-	sta $00
-	stx $01
-	
-	.dpage 0
-	
-	; set up hypervisor return stack frame
-	lda hyper_p
-	ldx hyper_pcl
-	ldy hyper_pch
-	
-	phy
-	phx
-	pha
-	
-	; Restore base page register and user stack
-	ldx hyper_spl
-	ldy hyper_sph
-	lda hyper_b
-	cle	; switch to user stack registers
-	txs
-	tys
-	see	; switch back to hypervisor stack
-	tab
-	
-	; Restore user registers
-	ldz hyper_z
-	ldy hyper_y
-	ldx hyper_x
-	lda hyper_a
-	
-	rti			; Return from hypervisor
-	
-	trap			; We shouldn't reach here.
-	
-*=	$bf00			; Kickstart ZP area
-
-hyper_a:		.byte 0
-hyper_x:		.byte 0
-hyper_y:		.byte 0
-hyper_z:		.byte 0
-hyper_b:		.byte 0
-hyper_spl:		.byte 0
-hyper_sph:		.byte 0
-hyper_p:		.byte 0
-hyper_pcl:		.byte 0
-hyper_pch:		.byte 0
-hyper_port_00:		.byte 0
-hyper_port_01:		.byte 0
-hyper_iomode:		.byte 0
-hyper_dmagic_srcmb:	.byte 0
-hyper_dmagic_dstmb:	.byte 0
-hyper_dmagic_list0:	.byte 0
-hyper_dmagic_list1:	.byte 0
-hyper_dmagic_list2:	.byte 0
-hyper_dmagic_list3:	.byte 0
-	
 *=      $fffa ; vectors
-    
-    .if (load_data_direct = 1) & (ROM_vectors = 1)  
+
+    .if (ROM_vectors = 1)
         .word  nmi_trap
         .word  res_trap
         .word  irq_trap
