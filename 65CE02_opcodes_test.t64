@@ -952,18 +952,18 @@ stacktests
 ; Test phw variants
         phw #$aa55      ; Should push $aa then $55
         pla
-        cmp #$aa
+        cmp #$55
         trap_ne
         pla
-        cmp #$55
+        cmp #$aa
         trap_ne
 
         phw abs1
         pla
-        cmp abs1+1
+        cmp abs1+0
         trap_ne
         pla
-        cmp abs1+0
+        cmp abs1+1
         trap_ne
 
 ; Test rtn #imm
@@ -2164,7 +2164,7 @@ ji_px   nop             ;low address byte matched with ji_ret
 
     .if (ROM_vectors = 1)
         .word  nmi_trap
-        .word  res_trap
+        .word  start
         .word  irq_trap
     .endif
         .endm code
