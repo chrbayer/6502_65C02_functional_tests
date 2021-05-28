@@ -1,0 +1,5 @@
+How to build verification ROM für 65ce02
+
+64tass --m65ce02 65CE02_opcodes_test.t64 --verbose-list -L map
+dd skip=49144 count=16384 if=a.out of=rom bs=1
+hexdump -v -e '1/1 "%02x " "\n"' rom >! rom.hex
