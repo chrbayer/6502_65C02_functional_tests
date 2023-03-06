@@ -1,5 +1,5 @@
 ;
-; 6 5 C 0 2   E X T E N D E D   O P C O D E S   T E S T
+; 6 5 C E 0 2   E X T E N D E D   O P C O D E S   T E S T
 ;
 ; Copyright (C) 2013-2017  Klaus Dormann
 ;
@@ -76,7 +76,7 @@
 ;ROM_vectors writable (0=no, 1=yes)
 ;if ROM vectors can not be used interrupts will not be trapped
 ;as a consequence BRK can not be tested but will be emulated to test RTI
-ROM_vectors = 1
+ROM_vectors = 0
 
 ;load_data_direct (0=move from code segment, 1=load directly)
 ;loading directly is preferred but may not be supported by your platform
@@ -677,6 +677,13 @@ ld_data lda data_init,x
         sta data_bss,x
         dex
         bpl ld_data
+      .if ROM_vectors == 1
+        ldx #5
+ld_vect lda vec_init,x
+        sta vec_bss,x
+        dex
+        bpl ld_vect
+      .endif
     .endif
 
 ;retain status of interrupt flag
@@ -2118,11 +2125,14 @@ data_end
         ERROR ERROR ERROR   ;mismatch between bss and data
     .endif
 
+    .if ROM_vectors == 1
 vec_init
         .word  nmi_trap
         .word  res_trap
         .word  irq_trap
 vec_bss = $fffa
+    .endif
+
     .endif                   ;end of RAM init data
 
 ; code at end of image due to the need to add blank space as required
@@ -2161,12 +2171,9 @@ ji_px   nop             ;low address byte matched with ji_ret
     .endif
 
 *=      $fffa ; vectors
-
-    .if (ROM_vectors = 1)
         .word  nmi_trap
         .word  start
         .word  irq_trap
-    .endif
         .endm code
 
 *       = code_segment
