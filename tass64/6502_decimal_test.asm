@@ -33,39 +33,58 @@ chk_v   = 0         ; check overflow flag
 chk_z   = 1         ; check zero flag
 chk_c   = 1         ; check carry flag
 
-end_of_test macro
-                jmp *     ;loop forever
-            endm
+;configure memory - try to stay away from memory used by the system
+zero_page = $a
 
-        bss
-        org 0
+;code_segment memory start address
+code_segment = $c000
+
+
+.if cputype == 1
+        .cpu "65c02"
+.elsif cputype == 2
+        .cpu "65816"
+.else
+        .cpu "6502"
+.endif
+
+end_of_test .macro
+                jmp *     ;loop forever
+            .endmacro
+
+bss        .segment
 ; operands - register Y = carry in
-N1      ds  1
-N2      ds  1
+N1      .byte  0
+N2      .byte  0
 ; binary result
-HA      ds  1
-HNVZC   ds  1
+HA      .byte  0
+HNVZC   .byte  0
                     ;04
 ; decimal result
-DA      ds  1
-DNVZC   ds  1
+DA      .byte  0
+DNVZC   .byte  0
 ; predicted results
-AR      ds  1
-NF      ds  1
+AR      .byte  0
+NF      .byte  0
                     ;08
-VF      ds  1
-ZF      ds  1
-CF      ds  1
-ERROR   ds  1
+VF      .byte  0
+ZF      .byte  0
+CF      .byte  0
+ERROR   .byte  0
                     ;0C
 ; workspace
-N1L     ds  1
-N1H     ds  1
-N2L     ds  1
-N2H     ds  2
+N1L     .byte  0
+N1H     .byte  0
+N2L     .byte  0
+N2H     .byte  0,0
+        .endsegment
 
-        code
-        org $c000
+*       = zero_page
+        .dsection bss
+        bss
+
+
+code    .segment
 TEST    cld
         ldx #$ff
         txs
@@ -76,33 +95,33 @@ TEST    cld
         sta N2
 LOOP1   lda N2    ; N2L = N2 & $0F
         and #$0F  ; [1] see text
-        if  vld_bcd = 1
-            cmp #$0a
-            bcs NEXT2
-        endif
+    .if vld_bcd == 1
+        cmp #$0a
+        bcs NEXT2
+    .endif
         sta N2L
         lda N2    ; N2H = N2 & $F0
         and #$F0  ; [2] see text
-        if  vld_bcd = 1
-            cmp #$a0
-            bcs NEXT2
-        endif
+    .if vld_bcd == 1
+        cmp #$a0
+        bcs NEXT2
+    .endif
         sta N2H
         ora #$0F  ; N2H+1 = (N2 & $F0) + $0F
         sta N2H+1
 LOOP2   lda N1    ; N1L = N1 & $0F
         and #$0F  ; [3] see text
-        if  vld_bcd = 1
-            cmp #$0a
-            bcs NEXT1
-        endif
+    .if vld_bcd == 1
+        cmp #$0a
+        bcs NEXT1
+    .endif
         sta N1L
         lda N1    ; N1H = N1 & $F0
         and #$F0  ; [4] see text
-        if  vld_bcd = 1
-            cmp #$a0
-            bcs NEXT1
-        endif
+    .if vld_bcd == 1
+        cmp #$a0
+        bcs NEXT1
+    .endif
         sta N1H
         jsr ADD
         jsr A6502
@@ -201,7 +220,7 @@ SUB     sed       ; decimal mode
         sta HNVZC ; flags result of N1-N2 using binary arithmetic
         rts
 
-        if cputype != 1
+    .if cputype != 1
 ; Calculate the predicted SBC accumulator result for the 6502 and 65816
 ;
 SUB1        cpy #1    ; set carry if Y = 1, clear carry if Y = 0
@@ -223,9 +242,9 @@ S11         ora N1H
             sbc #$5F  ; subtract $60 (carry is clear)
 S12         sta AR
             rts
-        endif
+    .endif
 
-        if cputype = 1
+    .if cputype == 1
 ; Calculate the predicted SBC accumulator result for the 65C02
 ;
 SUB2        cpy #1    ; set carry if Y = 1, clear carry if Y = 0
@@ -249,7 +268,7 @@ S22         cpx #0
             sbc #6
 S23         sta AR     ; predicted accumulator result
             rts
-        endif
+    .endif
 
 ; Compare accumulator actual results to predicted results
 ;
@@ -258,40 +277,40 @@ S23         sta AR     ; predicted accumulator result
 ;   Z flag = 0 (BNE branch) if different
 ;
 COMPARE
-        if chk_a = 1
-            lda DA
-            cmp AR
-            bne C1
-        endif
-        if chk_n = 1
-            lda DNVZC ; [7] see text
-            eor NF
-            and #$80  ; mask off N flag
-            bne C1
-        endif
-        if chk_v = 1
-            lda DNVZC ; [8] see text
-            eor VF
-            and #$40  ; mask off V flag
-            bne C1    ; [9] see text
-        endif
-        if chk_z = 1
-            lda DNVZC
-            eor ZF    ; mask off Z flag
-            and #2
-            bne C1    ; [10] see text
-        endif
-        if chk_c = 1
-            lda DNVZC
-            eor CF
-            and #1    ; mask off C flag
-        endif
+    .if chk_a == 1
+        lda DA
+        cmp AR
+        bne C1
+    .endif
+    .if chk_n == 1
+        lda DNVZC ; [7] see text
+        eor NF
+        and #$80  ; mask off N flag
+        bne C1
+    .endif
+    .if chk_v == 1
+        lda DNVZC ; [8] see text
+        eor VF
+        and #$40  ; mask off V flag
+        bne C1    ; [9] see text
+    .endif
+    .if chk_z == 1
+        lda DNVZC
+        eor ZF    ; mask off Z flag
+        and #2
+        bne C1    ; [10] see text
+    .endif
+    .if chk_c == 1
+        lda DNVZC
+        eor CF
+        and #1    ; mask off C flag
+    .endif
 C1      rts
 
 ; These routines store the predicted values for ADC and SBC for the 6502,
 ; 65C02, and 65816 in AR, CF, NF, VF, and ZF
 
-        if cputype = 0
+    .if cputype == 0
 
 A6502       lda VF      ; 6502
 ;
@@ -311,8 +330,8 @@ S6502       jsr SUB1
             sta CF
             rts
 
-        endif
-        if  cputype = 1
+    .endif
+    .if cputype == 1
 
 A6502       lda AR      ; 65C02
             php
@@ -332,8 +351,8 @@ S6502       jsr SUB2
             sta CF
             rts
 
-        endif
-        if  cputype = 2
+    .endif
+    .if cputype == 2
 
 A6502       lda AR      ; 65C816
             php
@@ -353,11 +372,16 @@ S6502       jsr SUB1
             sta CF
             rts
 
-        endif
+    .endif
 
-        org $fffa       ;vectors
-        dw  DONE
-        dw  TEST
-        dw  DONE
+*       = $fffa ;vectors
+        .word  DONE
+        .word  TEST
+        .word  DONE
+        .endsegment code
 
-        end TEST
+*       = code_segment
+        .dsection code
+        code
+
+        .end
