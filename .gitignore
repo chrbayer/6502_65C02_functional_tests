@@ -214,3 +214,8 @@ pip-log.txt
 
 #Mr Developer
 .mr.developer.cfg
+
+tass64/*.prg
+tass64/*.lst
+tass64/*.bin
+tass64/*.hex
