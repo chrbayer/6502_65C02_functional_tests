@@ -123,18 +123,19 @@ report = 0
 ;leave disabled if a monitor, OS or background interrupt is allowed to alter RAM
 ram_top = $10
 
-        ;noopt       ;do not take shortcuts
+
+.cpu "65ce02"
 
 ;macros for error & success traps to allow user modification
 ;example:
 ;trap    .macro
 ;        jsr my_error_handler
-;        .endm
+;        .endmacro
 ;trap_eq .macro
 ;        bne skip
 ;        trap           ;failed equal (zero)
 ;skip
-;        .endm
+;        .endmacro
 ;
 ; my_error_handler should pop the calling address from the stack and report it.
 ; putting larger portions of code (more than 3 bytes) inside the trap macro
@@ -142,86 +143,86 @@ ram_top = $10
     .if report == 0
 trap    .macro
         jmp *           ;failed anyway
-        .endm
+        .endmacro
 trap_eq .macro
         beq *           ;failed equal (zero)
-        .endm
+        .endmacro
 trap_ne .macro
         bne *           ;failed not equal (non zero)
-        .endm
+        .endmacro
 trap_cs .macro
         bcs *           ;failed carry set
-        .endm
+        .endmacro
 trap_cc .macro
         bcc *           ;failed carry clear
-        .endm
+        .endmacro
 trap_mi .macro
         bmi *           ;failed minus (bit 7 set)
-        .endm
+        .endmacro
 trap_pl .macro
         bpl *           ;failed plus (bit 7 clear)
-        .endm
+        .endmacro
 trap_vs .macro
         bvs *           ;failed overflow set
-        .endm
+        .endmacro
 trap_vc .macro
         bvc *           ;failed overflow clear
-        .endm
+        .endmacro
 ; please observe that during the test the stack gets invalidated
 ; therefore a RTS inside the success macro is not possible
 success .macro
         jmp *           ;test passed, no errors
-        .endm
+        .endmacro
     .endif
     .if report == 1
 trap    .macro
         jsr report_error
-        .endm
+        .endmacro
 trap_eq .macro
         bne skip
         trap           ;failed equal (zero)
 skip
-        .endm
+        .endmacro
 trap_ne .macro
         beq skip
         trap            ;failed not equal (non zero)
 skip
-        .endm
+        .endmacro
 trap_cs .macro
         bcc skip
         trap            ;failed carry set
 skip
-        .endm
+        .endmacro
 trap_cc .macro
         bcs skip
         trap            ;failed carry clear
 skip
-        .endm
+        .endmacro
 trap_mi .macro
         bpl skip
         trap            ;failed minus (bit 7 set)
 skip
-        .endm
+        .endmacro
 trap_pl .macro
         bmi skip
         trap            ;failed plus (bit 7 clear)
 skip
-        .endm
+        .endmacro
 trap_vs .macro
         bvc skip
         trap            ;failed overflow set
 skip
-        .endm
+        .endmacro
 trap_vc .macro
         bvs skip
         trap            ;failed overflow clear
 skip
-        .endm
+        .endmacro
 ; please observe that during the test the stack gets invalidated
 ; therefore a RTS inside the success macro is not possible
 success .macro
         jsr report_success
-        .endm
+        .endmacro
     .endif
 
 
@@ -256,50 +257,50 @@ m8i     = $ff&~intdis     ;8 bit mask - interrupt disable
         .if I_flag == 0
 load_flag   .macro
             lda #\1&m8i         ;force enable interrupts (mask I)
-            .endm
+            .endmacro
 cmp_flag    .macro
             cmp #(\1|fao)&m8i   ;I_flag is always enabled + always on bits
-            .endm
+            .endmacro
 eor_flag    .macro
             eor #(\1&m8i|fao)   ;mask I, invert expected flags + always on bits
-            .endm
+            .endmacro
         .endif
         .if I_flag == 1
 load_flag   .macro
             lda #\1|intdis      ;force disable interrupts
-            .endm
+            .endmacro
 cmp_flag    .macro
             cmp #(\1|fai)&m8    ;I_flag is always disabled + always on bits
-            .endm
+            .endmacro
 eor_flag    .macro
             eor #(\1|fai)       ;invert expected flags + always on bits + I
-            .endm
+            .endmacro
         .endif
         .if I_flag == 2
 load_flag   .macro
             lda #\1
             ora flag_I_on       ;restore I-flag
             and flag_I_off
-            .endm
+            .endmacro
 cmp_flag    .macro
             eor flag_I_on       ;I_flag is never changed
             cmp #(\1|fao)&m8i   ;expected flags + always on bits, mask I
-            .endm
+            .endmacro
 eor_flag    .macro
             eor flag_I_on       ;I_flag is never changed
             eor #(\1&m8i|fao)   ;mask I, invert expected flags + always on bits
-            .endm
+            .endmacro
         .endif
         .if I_flag == 3
 load_flag   .macro
             lda #\1             ;allow test to change I-flag (no mask)
-            .endm
+            .endmacro
 cmp_flag    .macro
             cmp #(\1|fao)&m8    ;expected flags + always on bits
-            .endm
+            .endmacro
 eor_flag    .macro
             eor #\1|fao         ;invert expected flags + always on bits
-            .endm
+            .endmacro
         .endif
 
 ;macros to set (register|memory|zeropage) & status
@@ -307,49 +308,49 @@ set_stat    .macro       ;setting flags in the processor status register
             load_flag \1
             pha         ;use stack to load status
             plp
-            .endm
+            .endmacro
 
 set_a       .macro       ;precharging accu & status
             load_flag \2
             pha         ;use stack to load status
             lda #<\1     ;precharge accu
             plp
-            .endm
+            .endmacro
 
 set_x       .macro       ;precharging index & status
             load_flag \2
             pha         ;use stack to load status
             ldx #<\1     ;precharge index x
             plp
-            .endm
+            .endmacro
 
 set_y       .macro       ;precharging index & status
             load_flag \2
             pha         ;use stack to load status
             ldy #<\1     ;precharge index y
             plp
-            .endm
+            .endmacro
 
 set_z       .macro       ;precharging index & status
             load_flag \2
             pha         ;use stack to load status
             ldz #<\1     ;precharge index x
             plp
-            .endm
+            .endmacro
 
 set_ax      .macro       ;precharging indexed accu & immediate status
             load_flag \2
             pha         ;use stack to load status
             lda \1,x    ;precharge accu
             plp
-            .endm
+            .endmacro
 
 set_ay      .macro       ;precharging indexed accu & immediate status
             load_flag \2
             pha         ;use stack to load status
             lda \1,y    ;precharge accu
             plp
-            .endm
+            .endmacro
 
 set_zp      .macro       ;precharging indexed zp & immediate status
             load_flag \2
@@ -357,7 +358,7 @@ set_zp      .macro       ;precharging indexed zp & immediate status
             lda \1,x    ;load to zeropage
             sta zpt
             plp
-            .endm
+            .endmacro
 
 set_zx      .macro       ;precharging zp,x & immediate status
             load_flag \2
@@ -365,7 +366,7 @@ set_zx      .macro       ;precharging zp,x & immediate status
             lda \1,x    ;load to indexed zeropage
             sta zpt,x
             plp
-            .endm
+            .endmacro
 
 set_abs     .macro       ;precharging indexed memory & immediate status
             load_flag \2
@@ -373,7 +374,7 @@ set_abs     .macro       ;precharging indexed memory & immediate status
             lda \1,x    ;load to memory
             sta abst
             plp
-            .endm
+            .endmacro
 
 set_absx    .macro       ;precharging abs,x & immediate status
             load_flag \2
@@ -381,7 +382,7 @@ set_absx    .macro       ;precharging abs,x & immediate status
             lda \1,x    ;load to indexed memory
             sta abst,x
             plp
-            .endm
+            .endmacro
 
 ;macros to test (register|memory|zeropage) & status & (mask)
 tst_stat    .macro       ;testing flags in the processor status register
@@ -391,7 +392,7 @@ tst_stat    .macro       ;testing flags in the processor status register
             cmp_flag \1
             trap_ne
             plp         ;restore status
-            .endm
+            .endmacro
 
 tst_a       .macro       ;testing result in accu & flags
             php         ;save flags
@@ -402,7 +403,7 @@ tst_a       .macro       ;testing result in accu & flags
             cmp_flag \2
             trap_ne
             plp         ;restore status
-            .endm
+            .endmacro
 
 tst_as      .macro       ;testing result in accu & flags, save accu
             pha
@@ -415,7 +416,7 @@ tst_as      .macro       ;testing result in accu & flags, save accu
             trap_ne
             plp         ;restore status
             pla
-            .endm
+            .endmacro
 
 tst_x       .macro       ;testing result in x index & flags
             php         ;save flags
@@ -426,7 +427,7 @@ tst_x       .macro       ;testing result in x index & flags
             cmp_flag \2
             trap_ne
             plp         ;restore status
-            .endm
+            .endmacro
 
 tst_y       .macro       ;testing result in y index & flags
             php         ;save flags
@@ -437,7 +438,7 @@ tst_y       .macro       ;testing result in y index & flags
             cmp_flag \2
             trap_ne
             plp         ;restore status
-            .endm
+            .endmacro
 
 tst_z       .macro       ;testing result in z index & flags
             php         ;save flags
@@ -448,7 +449,7 @@ tst_z       .macro       ;testing result in z index & flags
             cmp_flag \2
             trap_ne
             plp         ;restore status
-            .endm
+            .endmacro
 
 tst_ax      .macro       ;indexed testing result in accu & flags
             php         ;save flags
@@ -458,7 +459,7 @@ tst_ax      .macro       ;indexed testing result in accu & flags
             eor_flag \3
             cmp \2,x    ;test flags
             trap_ne     ;
-            .endm
+            .endmacro
 
 tst_ay      .macro       ;indexed testing result in accu & flags
             php         ;save flags
@@ -468,7 +469,7 @@ tst_ay      .macro       ;indexed testing result in accu & flags
             eor_flag \3
             cmp \2,y    ;test flags
             trap_ne
-            .endm
+            .endmacro
 
 tst_zp      .macro       ;indexed testing result in zp & flags
             php         ;save flags
@@ -479,7 +480,7 @@ tst_zp      .macro       ;indexed testing result in zp & flags
             eor_flag \3
             cmp \2,x    ;test flags
             trap_ne
-            .endm
+            .endmacro
 
 tst_zx      .macro       ;testing result in zp,x & flags
             php         ;save flags
@@ -490,7 +491,7 @@ tst_zx      .macro       ;testing result in zp,x & flags
             eor_flag \3
             cmp \2,x    ;test flags
             trap_ne
-            .endm
+            .endmacro
 
 tst_abs     .macro       ;indexed testing result in memory & flags
             php         ;save flags
@@ -501,7 +502,7 @@ tst_abs     .macro       ;indexed testing result in memory & flags
             eor_flag \3
             cmp \2,x    ;test flags
             trap_ne
-            .endm
+            .endmacro
 
 tst_absx    .macro       ;testing result in abs,x & flags
             php         ;save flags
@@ -512,7 +513,7 @@ tst_absx    .macro       ;testing result in abs,x & flags
             eor_flag \3
             cmp \2,x    ;test flags
             trap_ne
-            .endm
+            .endmacro
 
 test_num    .var 0
 next_test   .segment        ;make sure, tests don't jump the fence
@@ -523,7 +524,7 @@ test_num    .var test_num + 1
             lda #test_num   ;*** next tests' number
             sta test_case
             ;check_ram       ;uncomment to find altered RAM after each test
-            .endm
+            .endsegment
 
 bss        .segment
 ;break test interrupt save
@@ -580,7 +581,7 @@ sbi2    .word  sba2            ;indirect pointer to complemented operand 2 (SBC)
 adiy2   .word  ada2-$ff        ;with offset for indirect indexed
 sbiy2   .word  sba2-$ff
 zp_bss_end
-        .endm
+        .endsegment
 
 data    .segment
 pg_x    .byte  0,0             ;high JMP indirect address for page cross bug
@@ -637,7 +638,7 @@ data_bss_end
 jxi_tab = data_segment + $100 - 7     ;JMP (jxi_tab,x) x=6
 ji_tab  = data_segment + $100 - 3     ;JMP (ji_tab+2)
 jxp_tab = data_segment + $100         ;JMP (jxp_tab-255) x=255
-        .endm
+        .endsegment
 
 
 *       = zero_page
@@ -2170,11 +2171,11 @@ ji_px   nop             ;low address byte matched with ji_ret
         trap            ;jmp indirect page cross bug
     .endif
 
-*=      $fffa ; vectors
+*       = $fffa ;vectors
         .word  nmi_trap
         .word  start
         .word  irq_trap
-        .endm code
+        .endsegment code
 
 *       = code_segment
         .dsection code
