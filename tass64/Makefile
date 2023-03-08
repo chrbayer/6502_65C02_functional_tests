@@ -23,9 +23,9 @@ all: 6502_functional_test.hex 6502_decimal_test.hex 65C02_extended_opcodes_test.
 	$(HEXDUMP) $(HEXDUMP_OPTS) 65C02_extended_opcodes_test.bin > 65C02_extended_opcodes_test.hex
 
 65C02_decimal_test.hex: 6502_decimal_test.asm
-	$(TASS64) $(TASS64_OPTS) -Dcputype=1 6502_decimal_test.asm -o 65c02_decimal_test.prg -L 65c02_decimal_test.lst
-	$(DD) $(DD_OPTS) if=65c02_decimal_test.prg of=65c02_decimal_test.bin
-	$(HEXDUMP) $(HEXDUMP_OPTS) 65c02_decimal_test.bin > 65c02_decimal_test.hex
+	$(TASS64) $(TASS64_OPTS) -Dcputype=1 6502_decimal_test.asm -o 65C02_decimal_test.prg -L 65C02_decimal_test.lst
+	$(DD) $(DD_OPTS) if=65C02_decimal_test.prg of=65C02_decimal_test.bin
+	$(HEXDUMP) $(HEXDUMP_OPTS) 65C02_decimal_test.bin > 65C02_decimal_test.hex
 
 65CE02_opcodes_test.hex: 65CE02_opcodes_test.asm
 	$(TASS64) $(TASS64_OPTS) 65CE02_opcodes_test.asm -o 65CE02_opcodes_test.prg -L 65CE02_opcodes_test.lst
