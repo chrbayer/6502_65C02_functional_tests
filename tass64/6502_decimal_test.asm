@@ -145,6 +145,7 @@ NEXT2   inc N2    ; [6] see text
 AERROR
         lda #$f1
         sta ERROR
+DONE
         end_of_test
 SERROR
         lda #$f2
