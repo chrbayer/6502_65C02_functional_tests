@@ -26,7 +26,6 @@
 
 ; Configuration:
 ;cputype = 1         ; 0 = 6502, 1 = 65C02, 2 = 65C816
-vld_bcd = 1         ; 0 = allow invalid bcd, 1 = valid bcd only
 chk_a   = 1         ; check accumulator
 chk_n   = 1         ; check sign (negative) flag
 chk_v   = 0         ; check overflow flag
@@ -42,10 +41,13 @@ code_segment = $c000
 
 .if cputype == 1
         .cpu "65c02"
+        vld_bcd = 1         ; 0 = allow invalid bcd, 1 = valid bcd only
 .elsif cputype == 2
         .cpu "65816"
+        vld_bcd = 1         ; 0 = allow invalid bcd, 1 = valid bcd only
 .else
         .cpu "6502"
+        vld_bcd = 0         ; 0 = allow invalid bcd, 1 = valid bcd only
 .endif
 
 end_of_test .macro
@@ -126,11 +128,11 @@ LOOP2   lda N1    ; N1L = N1 & $0F
         jsr ADD
         jsr A6502
         jsr COMPARE
-        bne DONE
+        bne AERROR
         jsr SUB
         jsr S6502
         jsr COMPARE
-        bne DONE
+        bne SERROR
 NEXT1   inc N1    ; [5] see text
         bne LOOP2 ; loop through all 256 values of N1
 NEXT2   inc N2    ; [6] see text
@@ -139,7 +141,14 @@ NEXT2   inc N2    ; [6] see text
         bpl LOOP1 ; loop through both values of the carry flag
         lda #0    ; test passed, so store 0 in ERROR
         sta ERROR
-DONE
+        end_of_test
+AERROR
+        lda #$f1
+        sta ERROR
+        end_of_test
+SERROR
+        lda #$f2
+        sta ERROR
         end_of_test
 
 ; Calculate the actual decimal mode accumulator and flags, the accumulator
