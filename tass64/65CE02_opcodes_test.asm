@@ -515,8 +515,61 @@ tst_absx    .macro       ;testing result in abs,x & flags
             trap_ne
             .endmacro
 
+; RAM integrity test
+;   verifies that none of the previous tests has altered RAM outside of the
+;   designated write areas.
+;   uses zpt word as indirect pointer, zpt+2 word as checksum
+        .if ram_top > -1
+check_ram   .macro
+            cld
+            lda #0
+            sta zpt         ;set low byte of indirect pointer
+            sta zpt+3       ;checksum high byte
+            clc
+            ldx #zp_bss-zero_page ;zeropage - write test area
+ccs3        adc zero_page,x
+            bcc ccs2
+            inc zpt+3       ;carry to high byte
+            clc
+ccs2        inx
+            bne ccs3
+            ldx #>(abs1)    ;set high byte of indirect pointer
+            stx zpt+1
+            ldy #<(abs1)    ;data after write & execute test area
+ccs5        adc (zpt),y
+            bcc ccs4
+            inc zpt+3       ;carry to high byte
+            clc
+ccs4        iny
+            bne ccs5
+            inx             ;advance RAM high address
+            stx zpt+1
+            cpx #ram_top
+            bne ccs5
+            sta zpt+2       ;checksum low is
+            cmp ram_chksm   ;checksum low expected
+            trap_ne         ;checksum mismatch
+            lda zpt+3       ;checksum high is
+            cmp ram_chksm+1 ;checksum high expected
+            trap_ne         ;checksum mismatch
+            .endmacro
+        .else
+check_ram   .macro
+            ;RAM check disabled - RAM size not set
+            .endmacro
+        .endif
+
 test_num    .var 0
 next_test   .segment        ;make sure, tests don't jump the fence
+            lda test_case   ;previous test
+            cmp #test_num
+            trap_ne         ;test is out of sequence
+test_num    .var test_num + 1
+            lda #test_num   ;*** next tests' number
+            sta test_case
+            check_ram       ;uncomment to find altered RAM after each test
+            .endsegment
+next_test_   .segment       ;make sure, tests don't jump the fence
             lda test_case   ;previous test
             cmp #test_num
             trap_ne         ;test is out of sequence
@@ -992,10 +1045,14 @@ stacktests
         tys
         txs             ; init stack to $02ff
 
+        ldx $2ff        ; backup memory content in X and Y
+        ldy $2fe
+
         ; zero stack area
         lda #$00
         sta $2ff
         sta $2fe
+        tya
 
         ldy #$55
         phy
@@ -1016,6 +1073,9 @@ stacktests
         tsy
         cpy #$02        ; got back stack upper byte?
         trap_ne
+
+        sta $2fe        ; restore memory content
+        stx $2ff
 
 ; Extended stack mode - Verify that with E bit set (the default) that the stack
 ;                       still wraps at both ends.
@@ -1101,6 +1161,7 @@ stacktests
         trap_ne
 
         ; quick zero page write test
+        ldy zpt+$300    ; backup old value
         lda #$55
         sta zpt+$300    ; trash test location
 
@@ -1109,6 +1170,7 @@ stacktests
         cmp zpt+$300    ; verify it landed in expected place
         trap_ne
 
+        sty zpt+$300    ; restore old value
         lda #$00
         tab             ; put zero page back
 
@@ -1265,6 +1327,7 @@ stacktests
         next_test
 
 ; Quick test of sty abs,x and stx abs,y
+        ldx #$01
         ldy #$fc
         lda #$01
         sty abst,x
@@ -1784,6 +1847,43 @@ tora2
         trap_ne     ;sp push/pop mismatch
         next_test
 
+; 16-bit inrement/decrement INW/DEW zp
+inwdewtest
+        ldx #$00
+        ldy #$00
+        stx zpt+0
+        sty zpt+1
+
+chkinw  cpx zpt+0
+        trap_ne
+        cpy zpt+1
+        trap_ne
+
+        inw zpt         ; increment test location
+        inx
+        bne chkinw      ; haven't wrapped, check next value
+        iny
+        bne chkinw      ; haven't wrapped, check next value
+
+        ; pre-decrement back to 0xffff
+        dew zpt
+        dex
+        dey
+
+chkdew  cpx zpt+0
+        trap_ne
+        cpy zpt+1
+        trap_ne
+
+        dew zpt         ; increment test location
+        dex
+        cpx #$ff        ; wrapped?
+        bne chkdew      ; haven't wrapped, check next value
+        dey
+        cpy #$ff        ; wrapped?
+        bne chkdew      ; haven't wrapped, check next value
+        next_test
+
     .if I_flag == 3
         cli
     .endif
@@ -1819,7 +1919,7 @@ ji_ret  php             ;either SP or Y count will fail, if we do not hit
         tsx             ;SP check
         cpx #$ff
         trap_ne
-        next_test
+        next_test_
 
 ; jump indexed indirect
         ldx #11         ;prepare table
@@ -1868,44 +1968,7 @@ jxp_px
         trap            ;page cross by index to wrong page
 
 jxp_ok
-        next_test
-
-; 16-bit inrement/decrement INW/DEW zp
-inwdewtest
-        ldx #$00
-        ldy #$00
-        stx zpt+0
-        sty zpt+1
-
-chkinw  cpx zpt+0
-        trap_ne
-        cpy zpt+1
-        trap_ne
-
-        inw zpt         ; increment test location
-        inx
-        bne chkinw      ; haven't wrapped, check next value
-        iny
-        bne chkinw      ; haven't wrapped, check next value
-
-        ; pre-decrement back to 0xffff
-        dew zpt
-        dex
-        dey
-
-chkdew  cpx zpt+0
-        trap_ne
-        cpy zpt+1
-        trap_ne
-
-        dew zpt         ; increment test location
-        dex
-        cpx #$ff        ; wrapped?
-        bne chkdew      ; haven't wrapped, check next value
-        dey
-        cpy #$ff        ; wrapped?
-        bne chkdew      ; haven't wrapped, check next value
-        next_test
+        next_test_
 
         lda test_case
         cmp #test_num
@@ -1916,7 +1979,7 @@ chkdew  cpx zpt+0
 ; final RAM integrity test
 ;   verifies that none of the previous tests has altered RAM outside of the
 ;   designated write areas.
-        check_ram
+        ;check_ram
 ; *** DEBUG INFO ***
 ; to debug checksum errors uncomment check_ram in the next_test macro to
 ; narrow down the responsible opcode.

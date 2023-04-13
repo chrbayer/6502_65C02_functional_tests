@@ -608,7 +608,7 @@ next_test   .segment        ;make sure, tests don't jump the fence
 test_num    .var test_num + 1
             lda #test_num   ;*** next tests' number
             sta test_case
-            ;check_ram       ;uncomment to find altered RAM after each test
+            check_ram       ;uncomment to find altered RAM after each test
             .endsegment
 
 bss        .segment
